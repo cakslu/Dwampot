@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CLI Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+:root{
+  --bg:#080b10;--bg2:#0e1219;--bg3:#141921;--bg4:#1a2130;
+  --border:#1e2738;--border2:#2a3550;
+  --accent:#00ffa3;--accent2:#00cc82;--accent-dim:rgba(0,255,163,.1);--accent-glow:rgba(0,255,163,.18);
+  --warn:#f59e0b;--warn-dim:rgba(245,158,11,.12);
+  --danger:#f43f5e;--danger-dim:rgba(244,63,94,.12);
+  --info:#38bdf8;
+  --text:#dce6f5;--text2:#7b8fad;--text3:#3d4f6a;
+  --mono:'JetBrains Mono',monospace;--body:'DM Sans',sans-serif;
+  --r:8px;--r2:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.6;overflow-x:hidden}
+a{text-decoration:none;color:inherit}button{cursor:pointer;font-family:var(--body)}
+input,textarea{font-family:var(--body)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#000;font-weight:700}
+.logo-name{font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:1px}
+.logo-name span{color:var(--accent)}
+.tabs{display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px}
+.tab-btn{display:flex;align-items:center;gap:7px;padding:7px 18px;border-radius:7px;border:none;font-size:13px;font-weight:500;color:var(--text2);background:none;transition:all .2s;white-space:nowrap}
+.tab-btn:hover{color:var(--text);background:var(--bg4)}
+.tab-btn.active{background:var(--accent);color:#000;font-weight:600}
+.header-right{display:flex;align-items:center;gap:10px}
+.stat-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-family:var(--mono);font-size:11px;color:var(--text2)}
+.stat-pill b{color:var(--accent)}
+.db-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:var(--mono)}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s}
+.db-dot.ok{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.db-dot.err{background:var(--danger)}
+.db-dot.loading{background:var(--warn);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Login button di header */
+.btn-login{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;transition:all .2s}
+.btn-login:hover{border-color:var(--accent);color:var(--accent)}
+.btn-login.logged{border-color:rgba(0,255,163,.3);color:var(--accent);background:var(--accent-dim)}
+.admin-badge{font-size:10px;background:var(--accent);color:#000;padding:1px 7px;border-radius:20px;font-weight:700}
+
+/* PAGES */
+.page{display:none;flex:1;flex-direction:column}.page.active{display:flex}
+
+/* PAGE 1 SEARCH */
+.search-hero{padding:32px 28px 24px;background:linear-gradient(180deg,var(--bg2) 0%,transparent 100%);border-bottom:1px solid var(--border)}
+.search-hero h1{font-family:var(--mono);font-size:22px;font-weight:700;margin-bottom:4px}
+.search-hero h1 span{color:var(--accent)}
+.search-hero p{color:var(--text2);font-size:13px;margin-bottom:20px}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--r2);padding:11px 16px;transition:border-color .2s}
+.search-bar:focus-within{border-color:var(--accent)}
+.search-bar i{color:var(--text3);font-size:14px}
+.search-bar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px}
+.search-bar input::placeholder{color:var(--text3)}
+
+/* Filter row perangkat + kategori */
+.filter-row{padding:14px 28px 0;display:flex;flex-direction:column;gap:10px}
+.filter-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-lbl{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;min-width:72px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.res-header{padding:14px 28px 8px;display:flex;align-items:center}
+.res-count{font-size:12px;color:var(--text3)}.res-count b{color:var(--text2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;padding:0 28px 28px}
+.cmd-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s;position:relative;overflow:hidden}
+.cmd-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:transparent;transition:background .2s}
+.cmd-card:hover{border-color:var(--border2);transform:translateY(-1px)}.cmd-card:hover::before{background:var(--accent)}
+.card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.bd{background:rgba(99,102,241,.13);color:#a5b4fc;border:1px solid rgba(99,102,241,.22)}
+.bc{background:var(--warn-dim);color:var(--warn);border:1px solid rgba(245,158,11,.22)}
+.card-cmd{font-family:var(--mono);font-size:12px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(0,255,163,.12);border-radius:var(--r);padding:10px 14px;word-break:break-all;display:flex;align-items:center;gap:8px}
+.card-cmd span{flex:1}
+.copy-btn{background:none;border:none;color:var(--text3);padding:3px;border-radius:4px;transition:color .15s;font-size:13px}
+.copy-btn:hover{color:var(--accent)}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.7}
+.card-ex{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);border-left:2px solid var(--border2);padding:8px 12px;border-radius:0 var(--r) var(--r) 0;white-space:pre-wrap;word-break:break-all;display:none}
+.card-ex.show{display:block}
+.tex-btn{background:none;border:none;color:var(--text3);font-size:11px;display:flex;align-items:center;gap:5px;transition:color .15s;padding:0}
+.tex-btn:hover{color:var(--info)}
+.empty-s{display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:var(--text3)}
+.empty-s i{font-size:42px}
+
+/* PAGE 2 MANAGE */
+.manage-layout{display:grid;grid-template-columns:1fr 380px;gap:0;flex:1;min-height:0}
+.manage-left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
+.toolbar{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg2)}
+.toolbar .search-bar{flex:1;min-width:180px;padding:8px 14px;border-radius:var(--r)}
+.btn-add{display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r);border:none;background:var(--accent);color:#000;font-size:13px;font-weight:600;transition:background .2s}
+.btn-add:hover{background:var(--accent2)}
+.tbl-wrap{overflow-y:auto;flex:1}
+.mtbl{width:100%;border-collapse:collapse}
+.mtbl thead{position:sticky;top:0;z-index:5;background:var(--bg3)}
+.mtbl th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.mtbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtbl tbody tr{transition:background .12s;cursor:pointer}
+.mtbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.mtbl tbody tr.sel{background:var(--accent-glow)!important;border-left:2px solid var(--accent)}
+.m-cmd{font-family:var(--mono);font-size:11px;color:var(--accent);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-num{color:var(--text3);font-family:var(--mono);font-size:11px}
+.ra{display:flex;gap:6px}
+.rb{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--border);background:none;font-size:12px;transition:all .2s}
+.rb.ed{color:var(--warn)}.rb.ed:hover{background:var(--warn-dim);border-color:var(--warn)}
+.rb.dl{color:var(--danger)}.rb.dl:hover{background:var(--danger-dim);border-color:var(--danger)}
+.mtbl th:first-child,.mtbl td:first-child{width:36px;padding-left:14px;padding-right:4px}
+input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.bulk-bar{margin:12px 20px 0;border-radius:var(--r);background:var(--bg3);border:1px solid var(--border2);padding:9px 14px;display:none;align-items:center;justify-content:space-between;gap:10px}
+.bulk-bar.show{display:flex}.bulk-bar span{font-size:12px;color:var(--text2)}
+.empty-m{display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px;color:var(--text3)}
+.empty-m i{font-size:36px}
+
+/* FORM */
+.manage-right{display:flex;flex-direction:column;background:var(--bg2);overflow-y:auto}
+.fph{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:5}
+.fpt{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+.fpt .ai{color:var(--accent)}.fpt .ei{color:var(--warn)}
+.fmb{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.7px}
+.fmb.add{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,255,163,.2)}
+.fmb.edit{background:var(--warn-dim);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+.fbody{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.5px}
+.req{color:var(--danger)}.opt{color:var(--text3);font-weight:400}
+.fi{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;padding:9px 13px;outline:none;width:100%;transition:border-color .2s}
+.fi:focus{border-color:var(--accent)}
+textarea.fi{resize:vertical;min-height:70px}textarea.fi.mono{font-family:var(--mono);font-size:11px}
+.cwrap{display:flex;align-items:center;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .2s}
+.cwrap:focus-within{border-color:var(--accent)}
+.cpre{padding:0 12px;font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:700;background:var(--bg3);border-right:1px solid var(--border);align-self:stretch;display:flex;align-items:center;user-select:none}
+.cin{flex:1;background:none;border:none;outline:none;font-family:var(--mono);font-size:12px;color:var(--accent);padding:9px 13px}
+.sw{position:relative}
+.sdrop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);list-style:none;z-index:200;max-height:150px;overflow-y:auto;display:none}
+.sdrop li{padding:8px 13px;font-size:12px;color:var(--text);cursor:pointer;transition:background .12s}
+.sdrop li:hover{background:var(--bg3);color:var(--accent)}
+.ffoot{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;position:sticky;bottom:0;background:var(--bg2);z-index:5}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--r);font-size:13px;font-weight:600;border:1px solid transparent;transition:all .2s}
+.bp{background:var(--accent);color:#000;border-color:var(--accent)}.bp:hover{background:var(--accent2)}
+.bw{background:var(--warn-dim);color:var(--warn);border-color:rgba(245,158,11,.35)}.bw:hover{background:rgba(245,158,11,.2)}
+.bg{background:none;color:var(--text2);border-color:var(--border)}.bg:hover{background:var(--bg3);color:var(--text)}
+.bd2{background:var(--danger-dim);color:var(--danger);border-color:rgba(244,63,94,.3)}.bd2:hover{background:rgba(244,63,94,.2)}
+
+/* Tidak ada akses (locked panel) */
+.locked-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;flex:1;color:var(--text3);padding:40px}
+.locked-panel i{font-size:48px;color:var(--border2)}
+.locked-panel p{font-size:13px;text-align:center}
+.locked-panel .btn{margin-top:8px}
+
+/* LOADING */
+.loverlay{position:fixed;inset:0;background:rgba(8,11,16,.9);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s}
+.loverlay.hidden{opacity:0;pointer-events:none}
+.spin{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loverlay p{color:var(--text2);font-size:13px;font-family:var(--mono)}
+
+/* MODAL UMUM */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:999;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:36px 32px;max-width:400px;width:90%;display:flex;flex-direction:column;align-items:center;gap:16px}
+.modal-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.modal-icon.danger{background:var(--danger-dim);color:var(--danger);border:1px solid rgba(244,63,94,.25)}
+.modal-icon.info{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,255,163,.25)}
+.modal h3{font-size:18px;font-weight:700}.modal p{color:var(--text2);font-size:13px;text-align:center}
+.modal-act{display:flex;gap:10px;justify-content:center;width:100%}
+
+/* MODAL LOGIN & KREDENSIAL */
+.modal-form{width:100%;display:flex;flex-direction:column;gap:12px}
+.modal-form .fg{text-align:left}
+.modal-form label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px}
+.modal-err{font-size:12px;color:var(--danger);text-align:center;min-height:18px}
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap .fi{padding-right:40px}
+.pw-eye{position:absolute;right:12px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0}
+.pw-eye:hover{color:var(--accent)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 18px;font-size:13px;color:var(--text);z-index:9999;transform:translateY(16px);opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:9px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:var(--accent);color:var(--accent)}
+.toast.err{border-color:var(--danger);color:var(--danger)}
+.toast.warn{border-color:var(--warn);color:var(--warn)}
+
+@media(max-width:900px){.manage-layout{grid-template-columns:1fr}.manage-right{border-top:1px solid var(--border);max-height:55vh}.grid{grid-template-columns:1fr}}
+@media(max-width:620px){.header{padding:0 14px}.tabs .tab-btn span{display:none}.search-hero,.filter-row,.res-header,.grid,.toolbar{padding-left:16px;padding-right:16px}.stat-pill{display:none}}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loverlay" id="loverlay">
+  <div class="spin"></div>
+  <p>Menghubungkan ke Firebase...</p>
+</div>
+
+<div class="app">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark"><i class="fa-solid fa-terminal"></i></div>
+    <div class="logo-name">CLI<span>Vault</span></div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('search',this)"><i class="fa-solid fa-magnifying-glass"></i><span>Cari Command</span></button>
+    <button class="tab-btn" id="tabManage" onclick="switchTab('manage',this)"><i class="fa-solid fa-sliders"></i><span>Kelola Data</span></button>
+  </div>
+  <div class="header-right">
+    <div class="db-status"><div class="db-dot loading" id="dbDot"></div><span id="dbLbl" style="font-size:11px;font-family:var(--mono);color:var(--text3)">connecting...</span></div>
+    <div class="stat-pill"><i class="fa-solid fa-database"></i> <b id="hdrTotal">0</b> cmd</div>
+    <button class="btn-login" id="btnLogin" onclick="openLoginModal()">
+      <i class="fa-solid fa-lock"></i><span id="loginLabel">Login Admin</span>
+    </button>
+  </div>
+</header>
+
+<!-- PAGE 1: SEARCH -->
+<div class="page active" id="page-search">
+  <div class="search-hero">
+    <h1>Temukan <span>Command CLI</span> Anda</h1>
+    <p>Cari berdasarkan kata kunci, perangkat, atau kategori.</p>
+    <div class="search-bar">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="s-q" type="text" placeholder="cth: ip route, vlan, dhcp-server..." oninput="renderSearch()"/>
+    </div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-group">
+      <div class="filter-lbl">Perangkat</div>
+      <div class="chips" id="s-dev-chips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-lbl">Kategori</div>
+      <div class="chips" id="s-cat-chips"></div>
+    </div>
+  </div>
+  <div class="res-header"><div class="res-count" id="s-count"></div></div>
+  <div class="grid" id="s-grid"></div>
+  <div class="empty-s" id="s-empty"><i class="fa-solid fa-circle-xmark"></i><p>Tidak ada hasil yang cocok.</p></div>
+</div>
+
+<!-- PAGE 2: MANAGE -->
+<div class="page" id="page-manage">
+  <!-- Panel terkunci (belum login) -->
+  <div class="locked-panel" id="lockedPanel">
+    <i class="fa-solid fa-lock"></i>
+    <p>Halaman ini hanya untuk admin.<br>Silakan login terlebih dahulu.</p>
+    <button class="btn bp" onclick="openLoginModal()"><i class="fa-solid fa-right-to-bracket"></i> Login Admin</button>
+  </div>
+  <!-- Panel aktif (sudah login) -->
+  <div class="manage-layout" id="managePanel" style="display:none">
+    <div class="manage-left">
+      <div class="toolbar">
+        <div class="search-bar">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="m-q" type="text" placeholder="Filter command..." oninput="renderTable()"/>
+        </div>
+        <button class="btn-add" onclick="openAdd()"><i class="fa-solid fa-plus"></i> Tambah</button>
+      </div>
+      <div class="bulk-bar" id="bulkBar">
+        <span id="bulkCnt">0 dipilih</span>
+        <button class="btn bd2" onclick="bulkDel()"><i class="fa-solid fa-trash-can"></i> Hapus Dipilih</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="mtbl">
+          <thead><tr>
+            <th><input type="checkbox" id="chkAll" onchange="toggleAll(this)"/></th>
+            <th>#</th><th>Perangkat</th><th>Kategori</th><th>Command</th><th>Aksi</th>
+          </tr></thead>
+          <tbody id="m-tbody"></tbody>
+        </table>
+        <div class="empty-m" id="m-empty"><i class="fa-solid fa-terminal"></i><p>Belum ada data. Klik <b>+ Tambah</b>.</p></div>
+      </div>
+    </div>
+    <!-- RIGHT: FORM -->
+    <div class="manage-right">
+      <div class="fph">
+        <div class="fpt"><i class="fa-solid fa-circle-plus ai" id="fIcon"></i><span id="fTitle">Tambah Command</span></div>
+        <span class="fmb add" id="fBadge">BARU</span>
+      </div>
+      <div class="fbody">
+        <input type="hidden" id="f-key"/>
+        <div class="fg">
+          <label>Perangkat <span class="req">*</span></label>
+          <div class="sw">
+            <input class="fi" id="f-dev" type="text" placeholder="cth: Cisco Router, MikroTik..." autocomplete="off" oninput="suggest('f-dev','dev-drop','devices')"/>
+            <ul class="sdrop" id="dev-drop"></ul>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Kategori <span class="req">*</span></label>
+          <div class="sw">
+            <input class="fi" id="f-cat" type="text" placeholder="cth: Routing, VLAN, Firewall..." autocomplete="off" oninput="suggest('f-cat','cat-drop','cats')"/>
+            <ul class="sdrop" id="cat-drop"></ul>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Command CLI <span class="req">*</span></label>
+          <div class="cwrap"><span class="cpre">$</span><input class="cin" id="f-cmd" type="text" placeholder="ip route 0.0.0.0 0.0.0.0 ..."/></div>
+        </div>
+        <div class="fg">
+          <label>Deskripsi <span class="opt">(opsional)</span></label>
+          <textarea class="fi" id="f-desc" rows="3" placeholder="Jelaskan fungsi command ini..."></textarea>
+        </div>
+        <div class="fg">
+          <label>Contoh Output <span class="opt">(opsional)</span></label>
+          <textarea class="fi mono" id="f-ex" rows="3" placeholder="Contoh output terminal..."></textarea>
+        </div>
+      </div>
+      <div class="ffoot">
+        <button class="btn bg" onclick="openAdd()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+        <button class="btn bp" id="fSaveBtn" onclick="saveForm()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+        <button class="btn bg" onclick="openCredModal()" style="margin-left:auto" title="Ubah Kredensial"><i class="fa-solid fa-user-gear"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<!-- MODAL HAPUS -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <div class="modal-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <h3>Konfirmasi Hapus</h3>
+    <p id="modal-msg"></p>
+    <div class="modal-act">
+      <button class="btn bg" onclick="closeModal()">Batal</button>
+      <button class="btn bd2" id="modal-ok"><i class="fa-solid fa-trash-can"></i> Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LOGIN -->
+<div class="overlay" id="loginModal">
+  <div class="modal">
+    <div class="modal-icon info"><i class="fa-solid fa-terminal"></i></div>
+    <h3>Login Admin</h3>
+    <div class="modal-form">
+      <div class="fg">
+        <label>Username</label>
+        <input class="fi" id="l-user" type="text" placeholder="Username" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input class="fi" id="l-pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"/>
+          <button class="pw-eye" onclick="togglePw('l-pass',this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="modal-err" id="l-err"></div>
+    </div>
+    <div class="modal-act">
+      <button class="btn bg" onclick="closeLoginModal()">Batal</button>
+      <button class="btn bp" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL UBAH KREDENSIAL -->
+<div class="overlay" id="credModal">
+  <div class="modal">
+    <div class="modal-icon info"><i class="fa-solid fa-user-gear"></i></div>
+    <h3>Ubah Kredensial Admin</h3>
+    <div class="modal-form">
+      <div class="fg">
+        <label>Username Baru</label>
+        <input class="fi" id="c-user" type="text" placeholder="Username baru" autocomplete="off"/>
+      </div>
+      <div class="fg">
+        <label>Password Baru</label>
+        <div class="pw-wrap">
+          <input class="fi" id="c-pass" type="password" placeholder="Password baru"/>
+          <button class="pw-eye" onclick="togglePw('c-pass',this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Konfirmasi Password</label>
+        <div class="pw-wrap">
+          <input class="fi" id="c-pass2" type="password" placeholder="Ulangi password"/>
+          <button class="pw-eye" onclick="togglePw('c-pass2',this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="modal-err" id="c-err"></div>
+    </div>
+    <div class="modal-act">
+      <button class="btn bg" onclick="closeCredModal()">Batal</button>
+      <button class="btn bp" onclick="saveCred()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ── Firebase init ── */
+const fbApp = initializeApp({
+  apiKey:            "AIzaSyDsjaleqydAINlvT9f4UDQPSzWfGuTel14",
+  authDomain:        "slucli.firebaseapp.com",
+  projectId:         "slucli",
+  storageBucket:     "slucli.firebasestorage.app",
+  messagingSenderId: "674474016620",
+  appId:             "1:674474016620:web:0224862ddec7e377fefd49"
+});
+const db  = getFirestore(fbApp);
+const CMD = collection(db, 'commands');
+const CRED_DOC = doc(db, 'config', 'admin');
+
+/* ── CRUD ── */
+const dbInsert = entry       => addDoc(CMD, entry);
+const dbUpdate = (key, data) => updateDoc(doc(db, 'commands', key), data);
+const dbRemove = key         => deleteDoc(doc(db, 'commands', key));
+const dbBulk   = keys        => Promise.all(keys.map(k => dbRemove(k)));
+
+/* ── State ── */
+let _data      = [];
+let _loggedIn  = false;
+let _activeDev = 'all';
+let _activeCat = 'all';
+
+const all        = () => _data;
+const getDevices = () => [...new Set(_data.map(d => d.device))];
+const getCats    = () => [...new Set(_data.map(d => d.category))];
+
+/* ── Realtime listener ── */
+onSnapshot(CMD, snap => {
+  _data = snap.docs.map(d => ({...d.data(), _key: d.id}));
+  setDbStatus('ok');
+  document.getElementById('loverlay').classList.add('hidden');
+  refresh();
+}, err => {
+  setDbStatus('err');
+  document.getElementById('loverlay').classList.add('hidden');
+  toast('Firebase error: ' + err.message, 'err');
+});
+
+/* ── Helpers UI ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function copyCmd(txt){ navigator.clipboard.writeText(txt).then(()=>toast('Command disalin!')) }
+function closeModal(){ document.getElementById('modal').classList.remove('show') }
+
+let _tt;
+function toast(msg, type='ok'){
+  const t = document.getElementById('toast');
+  t.innerHTML = `<i class="fa-solid fa-${type==='ok'?'check':'triangle-exclamation'}"></i>${esc(msg)}`;
+  t.className = 'toast show ' + type;
+  clearTimeout(_tt); _tt = setTimeout(()=> t.className='toast', 3200);
+}
+function setDbStatus(s){
+  const dot = document.getElementById('dbDot'), lbl = document.getElementById('dbLbl');
+  dot.className = 'db-dot ' + s;
+  lbl.textContent = s==='ok' ? 'Firebase ✓' : s==='err' ? 'offline' : 'connecting...';
+}
+function updateHeader(){ document.getElementById('hdrTotal').textContent = _data.length }
+function refresh(){
+  updateHeader();
+  renderSearch();
+  if(document.getElementById('page-manage').classList.contains('active')) renderTable();
+}
+
+/* ── Tabs ── */
+window.switchTab = function(tab, btn){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='manage'){
+    document.getElementById('lockedPanel').style.display  = _loggedIn ? 'none'  : 'flex';
+    document.getElementById('managePanel').style.display  = _loggedIn ? 'grid'  : 'none';
+    if(_loggedIn) renderTable();
+  }
+};
+
+/* ── LOGIN ── */
+window.openLoginModal = function(){
+  if(_loggedIn){ doLogout(); return; }
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+  document.getElementById('l-err').textContent = '';
+  document.getElementById('loginModal').classList.add('show');
+  setTimeout(()=>document.getElementById('l-user').focus(), 100);
+};
+window.closeLoginModal = function(){ document.getElementById('loginModal').classList.remove('show') };
+
+window.doLogin = async function(){
+  const user = document.getElementById('l-user').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('l-err');
+  if(!user || !pass){ errEl.textContent = 'Username dan password wajib diisi.'; return; }
+
+  /* Ambil kredensial dari Firestore config/admin */
+  let storedUser = 'admin', storedPass = 'admin123';
+  try {
+    const snap = await getDoc(CRED_DOC);
+    if(snap.exists()){ storedUser = snap.data().username; storedPass = snap.data().password; }
+  } catch(e){}
+
+  if(user === storedUser && pass === storedPass){
+    _loggedIn = true;
+    errEl.textContent = '';
+    document.getElementById('loginModal').classList.remove('show');
+    document.getElementById('btnLogin').classList.add('logged');
+    document.getElementById('btnLogin').innerHTML = `<i class="fa-solid fa-unlock"></i><span id="loginLabel">Admin</span> <span class="admin-badge">ON</span>`;
+    toast('Login berhasil! Selamat datang, Admin.');
+    /* Tampilkan panel manage jika sedang di tab manage */
+    if(document.getElementById('page-manage').classList.contains('active')){
+      document.getElementById('lockedPanel').style.display = 'none';
+      document.getElementById('managePanel').style.display = 'grid';
+      renderTable();
+    }
+  } else {
+    errEl.textContent = 'Username atau password salah.';
+  }
+};
+
+function doLogout(){
+  _loggedIn = false;
+  document.getElementById('btnLogin').classList.remove('logged');
+  document.getElementById('btnLogin').innerHTML = `<i class="fa-solid fa-lock"></i><span id="loginLabel">Login Admin</span>`;
+  if(document.getElementById('page-manage').classList.contains('active')){
+    document.getElementById('lockedPanel').style.display = 'flex';
+    document.getElementById('managePanel').style.display = 'none';
+  }
+  toast('Logout berhasil.', 'warn');
+}
+
+window.togglePw = function(id, btn){
+  const inp = document.getElementById(id);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+};
+
+/* ── UBAH KREDENSIAL ── */
+window.openCredModal = function(){
+  document.getElementById('c-user').value = '';
+  document.getElementById('c-pass').value = '';
+  document.getElementById('c-pass2').value = '';
+  document.getElementById('c-err').textContent = '';
+  document.getElementById('credModal').classList.add('show');
+};
+window.closeCredModal = function(){ document.getElementById('credModal').classList.remove('show') };
+window.saveCred = async function(){
+  const user  = document.getElementById('c-user').value.trim();
+  const pass  = document.getElementById('c-pass').value;
+  const pass2 = document.getElementById('c-pass2').value;
+  const errEl = document.getElementById('c-err');
+  if(!user || !pass){ errEl.textContent = 'Username dan password wajib diisi.'; return; }
+  if(pass !== pass2){ errEl.textContent = 'Konfirmasi password tidak cocok.'; return; }
+  try {
+    await setDoc(CRED_DOC, { username: user, password: pass });
+    toast('Kredensial berhasil diperbarui!');
+    document.getElementById('credModal').classList.remove('show');
+  } catch(e){
+    errEl.textContent = 'Gagal menyimpan: ' + e.message;
+  }
+};
+
+/* ── Page 1: Search + Filter ── */
+function renderChips(){
+  const devs = getDevices();
+  const cats = getCats();
+
+  document.getElementById('s-dev-chips').innerHTML =
+    `<div class="chip ${_activeDev==='all'?'active':''}" onclick="setDev('all',this)"><span class="dot"></span>Semua</div>`
+    + devs.map(d=>`<div class="chip ${_activeDev===d?'active':''}" onclick="setDev(${JSON.stringify(d)},this)"><span class="dot"></span>${esc(d)}</div>`).join('');
+
+  document.getElementById('s-cat-chips').innerHTML =
+    `<div class="chip ${_activeCat==='all'?'active':''}" onclick="setCat('all',this)"><span class="dot"></span>Semua</div>`
+    + cats.map(c=>`<div class="chip ${_activeCat===c?'active':''}" onclick="setCat(${JSON.stringify(c)},this)"><span class="dot"></span>${esc(c)}</div>`).join('');
+}
+
+window.setDev = function(d, el){
+  _activeDev = d;
+  document.querySelectorAll('#s-dev-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSearch();
+};
+window.setCat = function(c, el){
+  _activeCat = c;
+  document.querySelectorAll('#s-cat-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSearch();
+};
+
+function renderSearch(){
+  renderChips();
+  const q = (document.getElementById('s-q').value||'').toLowerCase();
+  let data = all();
+  if(_activeDev !== 'all') data = data.filter(d => d.device === _activeDev);
+  if(_activeCat !== 'all') data = data.filter(d => d.category === _activeCat);
+  if(q) data = data.filter(d =>
+    d.device.toLowerCase().includes(q) || d.category.toLowerCase().includes(q) ||
+    d.command.toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)
+  );
+  const grid = document.getElementById('s-grid'), empty = document.getElementById('s-empty');
+  document.getElementById('s-count').innerHTML = `Menampilkan <b>${data.length}</b> dari <b>${_data.length}</b> command`;
+  if(!data.length){ grid.innerHTML=''; empty.style.display='flex'; return }
+  empty.style.display = 'none';
+  grid.innerHTML = data.map(d=>`
+    <div class="cmd-card">
+      <div class="card-top">
+        <span class="badge bd">${esc(d.device)}</span>
+        <span class="badge bc">${esc(d.category)}</span>
+      </div>
+      <div class="card-cmd">
+        <span>${esc(d.command)}</span>
+        <button class="copy-btn" onclick="copyCmd(${JSON.stringify(d.command)})"><i class="fa-regular fa-copy"></i></button>
+      </div>
+      ${d.description?`<div class="card-desc">${esc(d.description)}</div>`:''}
+      ${d.example?`
+        <button class="tex-btn" onclick="this.nextElementSibling.classList.toggle('show');this.querySelector('i').classList.toggle('fa-rotate-180')">
+          <i class="fa-solid fa-chevron-down" style="transition:transform .2s"></i> Lihat contoh output
+        </button>
+        <pre class="card-ex">${esc(d.example)}</pre>`:''}
+    </div>`).join('');
+}
+window.renderSearch = renderSearch;
+
+/* ── Page 2: Table ── */
+function renderTable(){
+  if(!_loggedIn) return;
+  const q = (document.getElementById('m-q').value||'').toLowerCase();
+  let data = all();
+  if(q) data = data.filter(d =>
+    d.device.toLowerCase().includes(q) || d.command.toLowerCase().includes(q) ||
+    d.category.toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('m-tbody'), empty = document.getElementById('m-empty');
+  if(!data.length){ tbody.innerHTML=''; empty.style.display='flex'; return }
+  empty.style.display = 'none';
+  tbody.innerHTML = data.map((d,i) => {
+    const k = d._key;
+    return `<tr id="row-${k}" data-key="${k}">
+      <td><input type="checkbox" class="rchk" value="${k}" onchange="updateBulk()"/></td>
+      <td class="m-num">${i+1}</td>
+      <td><span class="badge bd">${esc(d.device)}</span></td>
+      <td><span class="badge bc">${esc(d.category)}</span></td>
+      <td class="m-cmd" title="${esc(d.command)}">${esc(d.command)}</td>
+      <td>
+        <div class="ra">
+          <button class="rb ed" data-action="edit" data-key="${k}"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="rb dl" data-action="del" data-key="${k}" data-cmd="${esc(d.command)}"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  updateBulk();
+}
+window.renderTable = renderTable;
+
+/* ── Event delegation untuk tombol Edit, Hapus, dan klik baris ── */
+document.getElementById('m-tbody').addEventListener('click', function(e){
+  const edBtn = e.target.closest('[data-action="edit"]');
+  if(edBtn){ e.stopPropagation(); openEdit(edBtn.dataset.key); return; }
+  const dlBtn = e.target.closest('[data-action="del"]');
+  if(dlBtn){ e.stopPropagation(); confirmDel(dlBtn.dataset.key, dlBtn.dataset.cmd); return; }
+  if(e.target.type === 'checkbox') return;
+  const row = e.target.closest('tr[data-key]');
+  if(row) openEdit(row.dataset.key);
+});
+
+/* ── Bulk ── */
+window.toggleAll = function(cb){ document.querySelectorAll('.rchk').forEach(c => c.checked=cb.checked); updateBulk(); };
+function updateBulk(){
+  const ch = document.querySelectorAll('.rchk:checked'), bar = document.getElementById('bulkBar');
+  if(ch.length){ bar.classList.add('show'); document.getElementById('bulkCnt').textContent = ch.length+' dipilih' }
+  else bar.classList.remove('show');
+  const ac = document.querySelectorAll('.rchk');
+  document.getElementById('chkAll').indeterminate = ch.length>0 && ch.length<ac.length;
+  document.getElementById('chkAll').checked = ac.length>0 && ch.length===ac.length;
+}
+window.updateBulk = updateBulk;
+
+window.bulkDel = function(){
+  const keys = Array.from(document.querySelectorAll('.rchk:checked')).map(c => c.value);
+  if(!keys.length) return;
+  document.getElementById('modal-msg').textContent = `Hapus ${keys.length} command? Tidak dapat dibatalkan.`;
+  document.getElementById('modal-ok').onclick = async () => { await dbBulk(keys); toast(`${keys.length} command dihapus!`); closeModal(); };
+  document.getElementById('modal').classList.add('show');
+};
+
+window.confirmDel = function(key, cmd){
+  document.getElementById('modal-msg').textContent = `Hapus command "${cmd}"?`;
+  document.getElementById('modal-ok').onclick = async () => {
+    await dbRemove(key); toast('Command dihapus!'); closeModal();
+    if(document.getElementById('f-key').value === key) openAdd();
+  };
+  document.getElementById('modal').classList.add('show');
+};
+window.closeModal = closeModal;
+
+/* ── Form ── */
+function openAdd(){
+  document.getElementById('f-key').value = '';
+  ['f-dev','f-cat','f-cmd','f-desc','f-ex'].forEach(id => document.getElementById(id).value='');
+  setMode('add'); clearSel();
+}
+window.openAdd = openAdd;
+
+function openEdit(key){
+  const d = all().find(x => x._key===key); if(!d) return;
+  document.getElementById('f-key').value  = key;
+  document.getElementById('f-dev').value  = d.device;
+  document.getElementById('f-cat').value  = d.category;
+  document.getElementById('f-cmd').value  = d.command;
+  document.getElementById('f-desc').value = d.description||'';
+  document.getElementById('f-ex').value   = d.example||'';
+  setMode('edit'); clearSel();
+  const row = document.getElementById('row-'+key); if(row) row.classList.add('sel');
+}
+window.openEdit = openEdit;
+
+function setMode(m){
+  const ic=document.getElementById('fIcon'), ti=document.getElementById('fTitle'),
+        ba=document.getElementById('fBadge'), sb=document.getElementById('fSaveBtn');
+  if(m==='add'){
+    ic.className='fa-solid fa-circle-plus ai'; ti.textContent='Tambah Command';
+    ba.className='fmb add'; ba.textContent='BARU';
+    sb.className='btn bp'; sb.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan';
+  } else {
+    ic.className='fa-solid fa-pen-to-square ei'; ti.textContent='Edit Command';
+    ba.className='fmb edit'; ba.textContent='EDIT';
+    sb.className='btn bw'; sb.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Perbarui';
+  }
+}
+function clearSel(){ document.querySelectorAll('#m-tbody tr').forEach(r => r.classList.remove('sel')) }
+
+window.saveForm = async function(){
+  const key         = document.getElementById('f-key').value;
+  const device      = document.getElementById('f-dev').value.trim();
+  const category    = document.getElementById('f-cat').value.trim();
+  const command     = document.getElementById('f-cmd').value.trim();
+  const description = document.getElementById('f-desc').value.trim();
+  const example     = document.getElementById('f-ex').value.trim();
+  if(!device||!category||!command){ toast('Perangkat, kategori & command wajib diisi!','err'); return }
+  const entry = {device, category, command, description, example};
+  if(key){ await dbUpdate(key, entry); toast('Command diperbarui!') }
+  else   { await dbInsert(entry);      toast('Command ditambahkan!'); openAdd() }
+};
+
+/* ── Autocomplete ── */
+window.suggest = function(inputId, dropId, srcFn){
+  const val  = document.getElementById(inputId).value.toLowerCase();
+  const drop = document.getElementById(dropId);
+  if(!val){ drop.style.display='none'; return }
+  const items = (srcFn==='devices'?getDevices():getCats()).filter(s => s.toLowerCase().includes(val));
+  if(!items.length){ drop.style.display='none'; return }
+  drop.innerHTML = items.map(s=>`<li onclick="pick(${JSON.stringify(inputId)},${JSON.stringify(dropId)},${JSON.stringify(s)})">${esc(s)}</li>`).join('');
+  drop.style.display = 'block';
+};
+window.pick = function(iid, did, val){ document.getElementById(iid).value=val; document.getElementById(did).style.display='none'; };
+window.copyCmd = copyCmd;
+document.addEventListener('click', () => document.querySelectorAll('.sdrop').forEach(d => d.style.display='none'));
+</script>
+</body>
+</html>
