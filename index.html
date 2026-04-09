@@ -441,26 +441,25 @@ const all        = () => _data;
 const getDevices = () => [...new Set(_data.map(d => d.device))];
 const getCats    = () => [...new Set(_data.map(d => d.category))];
 
-/* ── Realtime listener ── */
-onSnapshot(CMD, snap => {
-  _data = snap.docs.map(d => ({...d.data(), _key: d.id}));
-  setDbStatus('ok');
-  document.getElementById('loverlay').classList.add('hidden');
-  /* Restore tampilan header jika sudah login */
-  if(_loggedIn){
-    document.getElementById('btnLogin').classList.add('logged');
-    document.getElementById('btnLogin').innerHTML = `<i class="fa-solid fa-unlock"></i><span id="loginLabel">Admin</span> <span class="admin-badge">ON</span>`;
-  }
-  refresh();
-}, err => {
-  setDbStatus('err');
-  document.getElementById('loverlay').classList.add('hidden');
-  toast('Firebase error: ' + err.message, 'err');
-});
-
 /* ── Helpers UI ── */
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-function copyCmd(txt){ navigator.clipboard.writeText(txt).then(()=>toast('Command disalin!')) }
+function copyCmd(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('Command disalin!')).catch(()=>{
+      fallbackCopy(txt);
+    });
+  } else {
+    fallbackCopy(txt);
+  }
+}
+function fallbackCopy(txt){
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('Command disalin!'); }
+  catch(e){ toast('Gagal menyalin','err'); }
+  document.body.removeChild(ta);
+}
 function closeModal(){ document.getElementById('modal').classList.remove('show') }
 
 let _tt;
@@ -481,6 +480,43 @@ function refresh(){
   renderSearch();
   if(document.getElementById('page-manage').classList.contains('active')) renderTable();
 }
+
+/* ── Expose ke window SEBELUM render pertama ── */
+window.copyCmd   = copyCmd;
+window.closeModal = closeModal;
+window.toast     = toast;
+
+window.setDev = function(d, el){
+  _activeDev = d;
+  document.querySelectorAll('#s-dev-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSearch();
+};
+window.setCat = function(c, el){
+  _activeCat = c;
+  document.querySelectorAll('#s-cat-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSearch();
+};
+
+/* ── Realtime listener ── */
+onSnapshot(CMD, snap => {
+  _data = snap.docs.map(d => ({...d.data(), _key: d.id}));
+  setDbStatus('ok');
+  document.getElementById('loverlay').classList.add('hidden');
+  /* Restore tampilan header jika sudah login */
+  if(_loggedIn){
+    document.getElementById('btnLogin').classList.add('logged');
+    document.getElementById('btnLogin').innerHTML = `<i class="fa-solid fa-unlock"></i><span id="loginLabel">Admin</span> <span class="admin-badge">ON</span>`;
+  }
+  refresh();
+}, err => {
+  setDbStatus('err');
+  document.getElementById('loverlay').classList.add('hidden');
+  toast('Firebase error: ' + err.message, 'err');
+});
+
+
 
 /* ── Tabs ── */
 window.switchTab = function(tab, btn){
@@ -595,19 +631,6 @@ function renderChips(){
     `<div class="chip ${_activeCat==='all'?'active':''}" onclick="setCat('all',this)"><span class="dot"></span>Semua</div>`
     + cats.map(c=>`<div class="chip ${_activeCat===c?'active':''}" onclick="setCat(${JSON.stringify(c)},this)"><span class="dot"></span>${esc(c)}</div>`).join('');
 }
-
-window.setDev = function(d, el){
-  _activeDev = d;
-  document.querySelectorAll('#s-dev-chips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderSearch();
-};
-window.setCat = function(c, el){
-  _activeCat = c;
-  document.querySelectorAll('#s-cat-chips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderSearch();
-};
 
 function renderSearch(){
   renderChips();
@@ -776,7 +799,6 @@ window.suggest = function(inputId, dropId, srcFn){
   drop.style.display = 'block';
 };
 window.pick = function(iid, did, val){ document.getElementById(iid).value=val; document.getElementById(did).style.display='none'; };
-window.copyCmd = copyCmd;
 document.addEventListener('click', () => document.querySelectorAll('.sdrop').forEach(d => d.style.display='none'));
 </script>
 </body>
